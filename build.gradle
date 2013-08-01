@@ -1,0 +1,140 @@
+apply plugin: 'signing'
+apply plugin: 'maven'
+
+group = 'com.keysolutions'
+version = '0.5.7.2'
+
+buildscript {
+   repositories {
+      mavenCentral()
+   }
+   dependencies {
+      classpath 'com.android.tools.build:gradle:0.5.+'
+   }
+}
+apply plugin: 'android-library'
+
+/// this overrides the default src/main gradle layout to match Eclipse's
+android {
+    compileSdkVersion 18
+    buildToolsVersion "18.0.0"
+    
+    defaultConfig {
+        targetSdkVersion 18
+        minSdkVersion 10
+        versionCode 10
+    }
+
+    sourceSets {
+        main {
+            manifest {
+                srcFile 'AndroidManifest.xml'
+            }
+            java {
+                srcDir 'src'
+            }
+            res {
+                srcDir 'res'
+            }
+            assets {
+                srcDir 'assets'
+            }
+            resources {
+                srcDir 'src'
+            }
+        }
+    }
+}
+
+
+/// add dependencies
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile group: 'com.android.support', name: 'support-v4', version: '13.0.+'
+    compile group: 'com.keysolutions', name: 'java-ddp-client', version: '0.5.7.+'
+}
+
+/// add tasks for Maven Central
+//jar method lives inside java plugin which we can't include because it conflict w/ Android plugin :-P
+//jar {
+//    manifest {
+//        attributes 'Implementation-Title': 'Android DDP Client Library', 'Implementation-Version': version
+//    }
+//}
+
+
+task makeJavadoc(type:Exec) {
+    commandLine 'javadoc', '-d', 'build/docs/javadoc', '-sourcepath', './src', '-subpackages', 'com'
+    standardOutput = new ByteArrayOutputStream()
+    errorOutput = new ByteArrayOutputStream()
+    //extension method makeJavadoc.output() can be used to obtain the output:
+    ext.output = {
+        return standardOutput.toString()
+    }
+    ext.error = {
+        return errorOutput.toString()
+    }
+}
+
+// can't ", dependsOn: javadoc" because that is in the java plugin which isn't compatible w/ Android plugin :-P
+task javadocJar(type: Jar, dependsOn: makeJavadoc) {
+    classifier = 'javadoc'
+    from 'build/docs/javadoc'
+}
+ 
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.allSource
+    classifier = 'sources'
+}
+
+
+
+uploadArchives {
+    repositories.mavenDeployer {
+        beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+ 
+        repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+            authentication(userName: sonatypeUsername, password: sonatypePassword)
+        }
+ 
+        pom.project {
+            name 'android-ddp-client'
+            packaging 'aar'
+            description 'AndroidDDPClient is an Android library for native apps that talk to the Meteor.js framework'
+            url 'https://github.com/kenyee/android-ddp-client'
+ 
+            scm {
+                url 'scm:git@github.com:kenyee/android-ddp-client.git'
+                connection 'scm:git@github.com:kenyee/android-ddp-client.git'
+                developerConnection 'scm:git@github.com:kenyee/android-ddp-client.git'
+            }
+ 
+            licenses {
+                license {
+                   name 'The Apache Software License, Version 2.0'
+                   url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                   distribution 'repo'
+                }
+            }
+ 
+            developers {
+                developer {
+                    id 'kenyee'
+                    name 'Ken Yee'
+                }
+            }
+        }
+    }
+}
+
+artifacts {
+    archives javadocJar
+    archives sourcesJar
+}
+signing {
+    sign configurations.archives
+}
+
