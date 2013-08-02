@@ -1,8 +1,6 @@
 Meteor.js Android DDP Client
 ============================
 
-Summary
--------
 This library is an Android layer that builds on top of the Java DDP Client.  
 It contains an Android-specific DDP state layer that makes it easier to develop a
 Meteor.js Android native client.
@@ -21,6 +19,9 @@ This library uses LocalBroadcastManager but this behavior can be overridden.
 The local Meteor collections are managed in this base implementation
 as Map<String,Object> document collections.  
 This behavior can be overridden so you can store data into SQLite.
+
+The [MeteorPartiesDDPClient](https://github.com/kenyee/MeteorPartiesDDPClient)
+is an example of how to use this library.
 
 Usage
 -----
