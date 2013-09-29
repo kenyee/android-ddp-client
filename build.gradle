@@ -2,7 +2,7 @@ apply plugin: 'signing'
 apply plugin: 'maven'
 
 group = 'com.keysolutions'
-version = '0.5.7.2'
+version = '0.5.7.3'
 
 buildscript {
    repositories {
@@ -17,7 +17,7 @@ apply plugin: 'android-library'
 /// this overrides the default src/main gradle layout to match Eclipse's
 android {
     compileSdkVersion 18
-    buildToolsVersion "18.0.0"
+    buildToolsVersion "18.0.1"
     
     defaultConfig {
         targetSdkVersion 18
@@ -53,12 +53,12 @@ repositories {
 }
 
 dependencies {
-    compile group: 'com.android.support', name: 'support-v4', version: '13.0.+'
-    compile group: 'com.keysolutions', name: 'java-ddp-client', version: '0.5.7.+'
+    compile "com.android.support:support-v4:[13.0,)"
+    compile "com.keysolutions:java-ddp-client:[0.5.7,)"
 }
 
 /// add tasks for Maven Central
-//jar method lives inside java plugin which we can't include because it conflict w/ Android plugin :-P
+//jar method lives inside java plugin which we can't include because it conflicts w/ Android plugin :-P
 //jar {
 //    manifest {
 //        attributes 'Implementation-Title': 'Android DDP Client Library', 'Implementation-Version': version
@@ -137,4 +137,32 @@ artifacts {
 signing {
     sign configurations.archives
 }
+
+
+// use this for testing pom.xml generation
+task writeNewPom << {
+    pom {
+        project {
+            inceptionYear '2013'
+            licenses {
+                license {
+                    name 'The Apache Software License, Version 2.0'
+                    url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    distribution 'repo'
+                }
+            }
+        }
+        /* converts Gradle dynamic dependency syntax 
+        whenConfigured { generatedPom ->
+          generatedPom.dependencies.each { mavenDep ->
+            if (isDynamic(mavenDep)) {
+              mavenDep.version = '[' + mavenDep.version[0..-2] + ',)'
+            }
+          }
+        }
+        */
+
+    }.writeTo("$buildDir/newpom.xml")
+}
+
 

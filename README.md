@@ -136,6 +136,7 @@ DDP protocol version 0.5.7 (handled by java-ddp-client library).
 
 * 0.5.7.1 uses com.google.android:support-v4:r7
 * 0.5.7.2 uses com.android.support:support-v4:13.0.+ and adds getDocument() method
+* 0.5.7.3 fix Maven dynamic version syntax
     
 To-Do
 -----
