@@ -271,7 +271,7 @@ public class DDPStateSingleton extends MeteorAuthCommands
     public void subscribe(final String subscriptionName, Object[] params) {
         // subscribe to a Meteor collection with given params
         // test error handling for invalid subscription
-        getDDP().subscribe(subscriptionName, new Object[] {}, new DDPListener() {
+        getDDP().subscribe(subscriptionName, params, new DDPListener() {
             @Override
             public void onReady(String id) {
                 // broadcast that subscription has been updated
