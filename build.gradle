@@ -2,25 +2,25 @@ apply plugin: 'signing'
 apply plugin: 'maven'
 
 group = 'com.keysolutions'
-version = '0.5.7.3'
+version = '0.5.7.4'
 
 buildscript {
    repositories {
       mavenCentral()
    }
    dependencies {
-      classpath 'com.android.tools.build:gradle:0.5.+'
+      classpath 'com.android.tools.build:gradle:0.7.+'
    }
 }
 apply plugin: 'android-library'
 
 /// this overrides the default src/main gradle layout to match Eclipse's
 android {
-    compileSdkVersion 18
-    buildToolsVersion "18.0.1"
+    compileSdkVersion 19
+    buildToolsVersion "19.0.1"
     
     defaultConfig {
-        targetSdkVersion 18
+        targetSdkVersion 19
         minSdkVersion 10
         versionCode 10
     }
