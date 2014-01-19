@@ -12,6 +12,7 @@ build/tests/
 build/test-results/
 build/tmp/
 build/ivy.xml
+build/lint*
 bin/
 gen/
 libs/
