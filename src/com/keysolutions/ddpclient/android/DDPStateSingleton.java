@@ -1,5 +1,5 @@
 /*
-* (c)Copyright 2013 Ken Yee, KEY Enterprise Solutions 
+* (c)Copyright 2013-2014 Ken Yee, KEY Enterprise Solutions 
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package com.keysolutions.ddpclient.android;
 
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
@@ -421,18 +422,13 @@ public class DDPStateSingleton extends MeteorAuthCommands
                     for (Map.Entry<String, Object> field : fields
                             .entrySet()) {
                         String fieldname = field.getKey();
-                        if (doc.containsKey(fieldname)) {
-                            doc.put(fieldname, field.getValue());
-                        }
+                        doc.put(fieldname, field.getValue());
                     }
                 }
                 // take care of clearing fields
-                fields = ((Map<String, Object>) jsonFields
-                        .get(DdpMessageField.CLEARED));
-                if (fields != null) {
-                    for (Map.Entry<String, Object> field : fields
-                            .entrySet()) {
-                        String fieldname = field.getKey();
+                List<String> clearfields = ((List<String>) jsonFields.get(DdpMessageField.CLEARED));
+                if (clearfields != null) {
+                    for (String fieldname : clearfields) {
                         if (doc.containsKey(fieldname)) {
                             doc.remove(fieldname);
                         }

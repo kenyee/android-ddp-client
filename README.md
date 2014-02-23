@@ -138,7 +138,8 @@ DDP protocol version 0.5.7 (handled by java-ddp-client library).
 * 0.5.7.2 uses com.android.support:support-v4:13.0.+ and adds getDocument() method
 * 0.5.7.3 fix Maven dynamic version syntax
 * 0.5.7.4 didn't use subscription parameter in ddpstatesingleton
-    
+* 0.5.7.6 fix handling of add/delete field (skipped version 0.5.7.6 to match java-ddp-client update)
+  
 To-Do
 -----
 * Move JUnit tests from java-ddp-client to this library?
