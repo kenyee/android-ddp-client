@@ -9,7 +9,7 @@ buildscript {
       mavenCentral()
    }
    dependencies {
-      classpath 'com.android.tools.build:gradle:0.8.+'
+      classpath 'com.android.tools.build:gradle:0.11.+'
    }
 }
 apply plugin: 'android-library'
@@ -17,7 +17,7 @@ apply plugin: 'android-library'
 /// this overrides the default src/main gradle layout to match Eclipse's
 android {
     compileSdkVersion 19
-    buildToolsVersion "19.0.1"
+    buildToolsVersion "19.1.0"
     
     defaultConfig {
         targetSdkVersion 19
@@ -53,7 +53,7 @@ repositories {
 }
 
 dependencies {
-    compile "com.android.support:support-v4:[13.0,)"
+    compile "com.android.support:support-v4:21.0.0-rc1"
     compile "com.keysolutions:java-ddp-client:[0.5.7,)"
 }
 
@@ -84,12 +84,21 @@ task javadocJar(type: Jar, dependsOn: makeJavadoc) {
     classifier = 'javadoc'
     from 'build/docs/javadoc'
 }
- 
+
+//* BB MOD - commented out
+// ERROR: Error:(90, 0) Could not find property 'allSource' on source set main.
 task sourcesJar(type: Jar) {
-    from android.sourceSets.main.allSource
+    //from android.sourceSets.main.allSource  // original that fires error
+    // solution compile all type of sources independently >> https://code.google.com/p/android/issues/detail?id=71174
+    from android.sourceSets.main.java,
+            android.sourceSets.main.res,
+            android.sourceSets.main.assets,
+            android.sourceSets.main.renderscript,
+            android.sourceSets.main.jni,
+            android.sourceSets.main.jniLibs
     classifier = 'sources'
 }
-
+//*/
 
 
 uploadArchives {
@@ -97,7 +106,13 @@ uploadArchives {
         beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
  
         repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-            authentication(userName: sonatypeUsername, password: sonatypePassword)
+            // original version
+            //authentication(userName: sonatypeUsername, password: sonatypePassword)
+            // BB mod - solved compilation error shown in github issue: https://github.com/kenyee/android-ddp-client/issues/1
+                // with StackOverflow answer from JBNizet - http://stackoverflow.com/questions/17311070/gradle-how-to-share-a-build-gradle-which-contains-information-i-am-the-only-one
+                // and his sample code https://github.com/Ninja-Squad/DbSetup/blob/master/build.gradle
+            // the solution implies that in android-ddp-client/project.properties you put 2 variables sonatypeUsername= and sonatypePassword= ... even with no values
+            authentication(userName: project.properties['sonatypeUsername'], password: project.properties['sonatypePassword'])
         }
  
         pom.project {

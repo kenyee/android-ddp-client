@@ -1,3 +1,13 @@
+Fork info
+---------
+This is a fork of [kenyees android-ddp-client][https://github.com/kenyee/android-ddp-client]
+- for now it changes only the build.gradle and project.properties
+to solve some compilation problems and update the android buildTools and dependencies
+to the latest versions.
+The changes are made to solve [this issue][https://github.com/kenyee/android-ddp-client/issues/1]
+
+
+
 Meteor.js Android DDP Client
 ============================
 
