@@ -53,7 +53,13 @@ repositories {
 }
 
 dependencies {
-    compile "com.android.support:support-v4:21.0.0-rc1"
+    // use lower support libraries and compat mode so that gradle compilation wont complain:
+    // uses-sdk:minSdkVersion 10 cannot be smaller than version L declared in library com.android.support:appcompat-v7:21.0.0-rc1
+    // solution here http://stackoverflow.com/questions/24436678/manifest-merger-failed-uses-sdkminsdkversion-10-cannot-be-smaller-than-versio
+    //compile "com.android.support:support-v4:21.0.0-rc1"
+    compile 'com.android.support:appcompat-v7:20.+'
+    compile 'com.android.support:support-v4:20.+'
+
     compile "com.keysolutions:java-ddp-client:[0.5.7,)"
 }
 
