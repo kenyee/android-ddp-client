@@ -1,3 +1,25 @@
+Fork info
+---------
+This is a fork of [kenyees android-ddp-client][https://github.com/kenyee/android-ddp-client]
+This Version is still under heavy development but a few improvements over kenyee's version have been added:
+
+### changes to Kenyee's version
+- changes to the build.gradle and project.properties
+to solve some compilation problems and update the android buildTools and dependencies to the latest versions.
+The changes are made to solve [this issue][https://github.com/kenyee/android-ddp-client/issues/1]
+- modified the build.gradle to allow a local version of java-ddp-client that also needed to be updated. 
+It now connects to my forked version of kenyees java-ddp-client since this has been modified to solve connection problems and updated to DDP protocol v1 for Meteor 1.0
+- solved a couple of connection bugs, due to the update to DDP protocol v1
+
+
+### improvements over Kenyee's version:
+- every new doc you want to add to your collections can now implement a superClass MeteorCollectionsDoc 
+which has universal utilities across all docs, such as getField, getString, getInteger, getBoolean, getArrayOfObjects
+more are coming soon
+
+- implemented ddp.areAllSubscriptionsReady() in DDPStateSingleton to inform of successfull load order on multi-subscriptions situations
+
+
 Meteor.js Android DDP Client
 ============================
 

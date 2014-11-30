@@ -16,6 +16,8 @@
 
 package com.keysolutions.ddpclient.android;
 
+import android.util.Log;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,7 +27,10 @@ import com.keysolutions.ddpclient.EmailAuth;
 import com.keysolutions.ddpclient.TokenAuth;
 
 public abstract class MeteorAuthCommands {
-    
+
+    public final static boolean TRACE = true;		            // for debugging
+    public final String TAG = "MeteorAuthCommands";
+
     abstract DDPClient getDDP();
     abstract void handleLoginResult(Map<String, Object> jsonFields);
 
@@ -34,6 +39,7 @@ public abstract class MeteorAuthCommands {
      * @param token resume token
      */
     public void login(String token) {
+        if (TRACE) Log.v("MeteorAuthCommands", "login - " + "token = [" + token + "]");
         TokenAuth tokenAuth = new TokenAuth(token);
         Object[] methodArgs = new Object[1];
         methodArgs[0] = tokenAuth;
@@ -51,6 +57,7 @@ public abstract class MeteorAuthCommands {
      * @param password password
      */
     public void login(String username, String password) {
+        if (TRACE) Log.v("MeteorAuthCommands", "login - " + "username = [" + username + "], password = [" + password + "]");
         Object[] methodArgs = new Object[1];
         EmailAuth emailpass = new EmailAuth(username, password);
         methodArgs[0] = emailpass;
@@ -69,8 +76,8 @@ public abstract class MeteorAuthCommands {
      * @param password password
      * @return true if create user called
      */
-    public boolean registerUser(String username, String email,
-            String password) {
+    public boolean registerUser(String username, String email,String password) {
+        if (TRACE) Log.v("MeteorAuthCommands", "registerUser - " + "username = [" + username + "], email = [" + email + "], password = [" + password + "]");
         if (((username == null) && (email == null)) || (password == null)) {
             return false;
         }
@@ -97,8 +104,8 @@ public abstract class MeteorAuthCommands {
      * Sends password reset mail to specified email address
      * @param email email address of user
      */
-    public void forgotPassword(String email)
-    {
+    public void forgotPassword(String email) {
+        if (TRACE) Log.v("MeteorAuthCommands", "forgotPassword - " + "email = [" + email + "]");
         if (email == null) {
             return;
         }

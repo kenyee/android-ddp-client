@@ -25,6 +25,5 @@ import com.keysolutions.ddpclient.android.DDPStateSingleton.DDPSTATE;
 public interface DDPStateBroadcasts {
     void broadcastConnectionState(DDPSTATE ddpstate);
     void broadcastDDPError(String errorMsg);
-    void broadcastSubscriptionChanged(String subscriptionName,
-            String changetype, String docId);
+    void broadcastSubscriptionChanged(String subscriptionName, String changetype, String docId);
 }
