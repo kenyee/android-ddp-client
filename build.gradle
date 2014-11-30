@@ -9,7 +9,7 @@ buildscript {
       mavenCentral()
    }
    dependencies {
-      classpath 'com.android.tools.build:gradle:0.11.+'
+      classpath 'com.android.tools.build:gradle:0.12.2'
    }
 }
 apply plugin: 'android-library'
@@ -60,7 +60,10 @@ dependencies {
     compile 'com.android.support:appcompat-v7:20.+'
     compile 'com.android.support:support-v4:20.+'
 
-    compile "com.keysolutions:java-ddp-client:[0.5.7,)"
+    //TODO - uncomment it. It is temporarily excluded to be able to use the forked java-ddp-client library and debug some connection issues
+    //compile "com.keysolutions:java-ddp-client:[0.5.7,)"
+    //compile project(':java-ddp-client') // I'm asking not to compile it from the android-ddp-client.build.gradle because I'm compiling already in the main app
+    compile project(':java-ddp-client')
 }
 
 /// add tasks for Maven Central

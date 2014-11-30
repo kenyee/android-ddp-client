@@ -11,7 +11,7 @@ import java.util.Map;
  * one doc coming from mongoDB
  * it has all the functions needed to read all the main properties that are usually found in a mongoDB doc
  */
-public class MeteorCollectionDoc {
+public class MeteorCollectionDoc{
 
     /**
      * This is a reference to the hashmap object in our "data store"
@@ -30,7 +30,7 @@ public class MeteorCollectionDoc {
      * @param fields sets the object with all the fields of the document
      */
     public MeteorCollectionDoc (String docId, Map<String, Object> fields) {
-        Log.v("MeteorCollectionDoc", "Constructor - " + "docId = [" + docId + "], fields = [" + fields + "]");
+        //Log.v("MeteorCollectionDoc", "Constructor - " + "docId = [" + docId + "], fields = [" + fields + "]");
         this.mFields = fields;
         this.mDocId = docId;
     }
@@ -80,6 +80,19 @@ public class MeteorCollectionDoc {
         return mFields.get(keyName);
     }
 
+    public String getString (String keyName) {
+        return (String) mFields.get(keyName);
+    }
+
+    public Integer getInteger (String keyName) {
+        return (Integer) mFields.get(keyName);
+    }
+
+    public Boolean getBoolean (String keyName) {
+        return (Boolean) mFields.get(keyName);
+    }
+
+    //TODO getArray of strings, Arrayof Objects and getObject > which uses a Map<String, Object>
 
     /**
      * get an array of objects whose key is the value of the keyName param
