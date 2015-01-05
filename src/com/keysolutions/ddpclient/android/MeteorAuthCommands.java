@@ -23,6 +23,7 @@ import com.keysolutions.ddpclient.DDPClient;
 import com.keysolutions.ddpclient.DDPListener;
 import com.keysolutions.ddpclient.EmailAuth;
 import com.keysolutions.ddpclient.TokenAuth;
+import com.keysolutions.ddpclient.UsernameAuth;
 
 public abstract class MeteorAuthCommands {
     
@@ -52,8 +53,14 @@ public abstract class MeteorAuthCommands {
      */
     public void login(String username, String password) {
         Object[] methodArgs = new Object[1];
-        EmailAuth emailpass = new EmailAuth(username, password);
-        methodArgs[0] = emailpass;
+        if (username != null && username.indexOf('@') > 1) {
+            EmailAuth emailpass = new EmailAuth(username, password);
+            methodArgs[0] = emailpass;
+        } else {
+            UsernameAuth userpass = new UsernameAuth(username, password);
+            methodArgs[0] = userpass;
+        }
+        
         getDDP().call("login", methodArgs, new DDPListener() {
             @Override
             public void onResult(Map<String, Object> jsonFields) {

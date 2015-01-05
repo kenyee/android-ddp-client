@@ -68,6 +68,8 @@ public class DDPBroadcastReceiver extends BroadcastReceiver {
 
     /**
      * Handles receiving Android broadcast messages
+     * @param context Android context
+     * @param intent Android intent
      */
     @Override
     public void onReceive(Context context, Intent intent) {

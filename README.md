@@ -126,7 +126,7 @@ And in Maven, you can reference it with this:
     <dependency>
       <groupId>com.keysolutions</groupId>
       <artifactId>android-ddp-client</artifactId>
-      <version>0.5.7.4</version>
+      <version>1.0.0.0</version>
       <type>pom</type>
     </dependency>
 
@@ -139,6 +139,7 @@ DDP protocol version 0.5.7 (handled by java-ddp-client library).
 * 0.5.7.3 fix Maven dynamic version syntax
 * 0.5.7.4 didn't use subscription parameter in ddpstatesingleton
 * 0.5.7.6 fix handling of add/delete field (skipped version 0.5.7.6 to match java-ddp-client update)
+* 1.0.0.0 update to latest libraries and match java-ddp-client version w/ ping/pong support; merge pull requests
   
 To-Do
 -----

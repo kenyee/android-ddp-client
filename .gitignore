@@ -3,7 +3,9 @@ build/bundles/
 build/classes/
 build/dependency-cache/
 build/docs/
+build/generated/
 build/incremental/
+build/intermediates/
 build/poms/
 build/reports/
 build/resources/

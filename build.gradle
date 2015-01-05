@@ -2,25 +2,26 @@ apply plugin: 'signing'
 apply plugin: 'maven'
 
 group = 'com.keysolutions'
-version = '0.5.7.6'
+version = '1.0.0.0'
 
 buildscript {
    repositories {
       mavenCentral()
    }
    dependencies {
-      classpath 'com.android.tools.build:gradle:0.8.+'
+      classpath 'com.android.tools.build:gradle:1.0.+'
    }
 }
+
 apply plugin: 'android-library'
 
 /// this overrides the default src/main gradle layout to match Eclipse's
 android {
-    compileSdkVersion 19
-    buildToolsVersion "19.0.1"
+    compileSdkVersion 21
+    buildToolsVersion "21.1.2"
     
     defaultConfig {
-        targetSdkVersion 19
+        targetSdkVersion 21
         minSdkVersion 10
         versionCode 10
     }
@@ -53,8 +54,8 @@ repositories {
 }
 
 dependencies {
-    compile "com.android.support:support-v4:[13.0,)"
-    compile "com.keysolutions:java-ddp-client:[0.5.7,)"
+    compile "com.android.support:support-v4:[21.0,)"
+    compile "com.keysolutions:java-ddp-client:[1.0.0,)"
 }
 
 /// add tasks for Maven Central
@@ -65,9 +66,12 @@ dependencies {
 //    }
 //}
 
-
 task makeJavadoc(type:Exec) {
-    commandLine 'javadoc', '-d', 'build/docs/javadoc', '-sourcepath', './src', '-subpackages', 'com'
+	if (System.properties['os.name'].toLowerCase().contains('windows')) {
+      commandLine 'cmd', '/c', 'javadoc', '-d', 'build/docs/javadoc', '-sourcepath', './src', '-subpackages', 'com'
+    } else {
+      commandLine 'javadoc', '-d', 'build/docs/javadoc', '-sourcepath', './src', '-subpackages', 'com'
+	}
     standardOutput = new ByteArrayOutputStream()
     errorOutput = new ByteArrayOutputStream()
     //extension method makeJavadoc.output() can be used to obtain the output:
@@ -86,11 +90,12 @@ task javadocJar(type: Jar, dependsOn: makeJavadoc) {
 }
  
 task sourcesJar(type: Jar) {
-    from android.sourceSets.main.allSource
+    from android.sourceSets.main.java.srcDirs
     classifier = 'sources'
 }
 
-
+project.ext.sonatypeUsername = project.hasProperty('sonatypeUsername') ? sonatypeUsername : ""
+project.ext.sonatypePassword = project.hasProperty('sonatypePassword') ? sonatypePassword : ""
 
 uploadArchives {
     repositories.mavenDeployer {
