@@ -56,6 +56,8 @@ repositories {
 dependencies {
     compile "com.android.support:support-v4:[21.0,)"
     compile "com.keysolutions:java-ddp-client:[1.0.0,)"
+    //for oauth
+    compile 'com.mcxiaoke.volley:library:1.0.+'
 }
 
 /// add tasks for Maven Central
@@ -82,7 +84,6 @@ task makeJavadoc(type:Exec) {
         return errorOutput.toString()
     }
 }
-
 // can't ", dependsOn: javadoc" because that is in the java plugin which isn't compatible w/ Android plugin :-P
 task javadocJar(type: Jar, dependsOn: makeJavadoc) {
     classifier = 'javadoc'
