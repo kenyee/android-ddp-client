@@ -703,7 +703,21 @@ public class DDPStateSingleton extends MeteorAuthCommands
         }
         return null;
     }
-    
+
+    /**
+     * Gets current Meteor user info
+     * @return user Info or null if not logged in
+     */
+    public Map<String, Object> getUser() {
+        //Log.v("DDPStateSingleton", "getDocument - " + "collectionName = [" + collectionName + "], docId = [" + docId + "]");
+        Map<String, Object> userFields = DDPStateSingleton.getInstance()
+                .getDocument("users", getUserId());
+        if (userFields != null) {
+            return userFields;
+        }
+        return null;
+    }
+
     /**
      * Gets current Meteor user ID
      * @return user ID or null if not logged in
