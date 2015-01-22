@@ -675,7 +675,17 @@ public class DDPStateSingleton extends MeteorAuthCommands
             mCollections.put(collName, new ConcurrentHashMap<String, Map<String,Object>>());
         }
         Map<String, Map<String,Object>> collection = mCollections.get(collName);
-        collection.put(docId, (Map<String, Object>) jsonFields.get(DdpMessageField.FIELDS));
+
+        Map<String, Object> fields;
+
+        if(jsonFields.get(DdpMessageField.FIELDS) == null) {
+            fields = new ConcurrentHashMap<>();
+        } else {
+            fields = (Map<String, Object>) jsonFields.get(DdpMessageField.FIELDS);
+        }
+
+        collection.put(docId, fields);
+
         Log.v(TAG, "Added docid " + docId + " to collection " + collName);
     }
 
