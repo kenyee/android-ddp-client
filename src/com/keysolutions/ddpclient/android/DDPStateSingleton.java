@@ -18,6 +18,7 @@ package com.keysolutions.ddpclient.android;
 
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -131,6 +132,9 @@ public class DDPStateSingleton extends MeteorAuthCommands
     
     /** Google GSON object for parsing JSON */
     protected final Gson mGSON = new Gson();
+
+    /** Array for mobile login services which sepecifically only return long-lived access tokens **/
+    protected final List<String> accessTokenServices = Arrays.asList("facebook");
 
     /**
      * Connects to default meteor server/port on current machine (not a good idea...use the other method)
@@ -354,12 +358,15 @@ public class DDPStateSingleton extends MeteorAuthCommands
     /**
      * Logs in using access token -- this breaks the current convention,
      * but the method call is dependent on some of this class's variables
-     * @param serviceName service name i.e facebook, github
-     * @param accessToken access token received
-     * login with OAuth only works after customizing the accounts-x packages,
+     * @param serviceName service name i.e facebook, google
+     * @param accessToken short-lived one-time code received, or long-lived access token for Facebook login
+     * For some logins, such as Facebook, login with OAuth may only work after customizing the accounts-x packages,
      * until meteor decides to change the packages themselves.
      * use https://github.com/jasper-lu/accounts-facebook-ddp and
      *     https://github.com/jasper-lu/facebook-ddp for reference
+     *
+     * If an sdk only allows login returns long-lived token, modify your accounts-x package,
+     * and add the service to the accessTokenServices list
      */
 
     public void loginWithOAuth(String serviceName, String accessToken) {
@@ -404,7 +411,13 @@ public class DDPStateSingleton extends MeteorAuthCommands
     private void sendOAuthHTTPRequest(String serviceName, String accessToken, String credentialToken, Response.Listener listener) {
         RequestQueue queue = Volley.newRequestQueue(mContext);
         String url = "http://" + getServerHostname() + ":" + getServerPort() + "/_oauth/" + serviceName + "/";
-        String params = "?accessToken=" + accessToken + "&state=" + generateState(credentialToken);
+        //as far as I know, Facebook is the only one that only returns a long-lived token on mobile login
+        String params;
+        if (accessTokenServices.contains(serviceName)) {
+            params = "?accessToken=" + accessToken + "&state=" + generateState(credentialToken);
+        } else {
+            params = "?code=" + accessToken + "&state=" + generateState(credentialToken);
+        }
 
         StringRequest request = new StringRequest(Request.Method.GET, url + params, listener, new Response.ErrorListener() {
             @Override
