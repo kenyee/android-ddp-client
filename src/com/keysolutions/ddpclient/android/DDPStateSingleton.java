@@ -18,25 +18,40 @@ package com.keysolutions.ddpclient.android;
 
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.support.v4.content.LocalBroadcastManager;
+import android.util.Base64;
 import android.util.Log;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.gson.Gson;
 import com.keysolutions.ddpclient.DDPClient;
 import com.keysolutions.ddpclient.DDPClient.CONNSTATE;
 import com.keysolutions.ddpclient.DDPClient.DdpMessageField;
 import com.keysolutions.ddpclient.DDPClient.DdpMessageType;
 import com.keysolutions.ddpclient.DDPListener;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * Base/common handling of DDP state with default handling of collection data as maps
@@ -117,6 +132,9 @@ public class DDPStateSingleton extends MeteorAuthCommands
     
     /** Google GSON object for parsing JSON */
     protected final Gson mGSON = new Gson();
+
+    /** Array for mobile login services which sepecifically only return long-lived access tokens **/
+    protected final List<String> accessTokenServices = Arrays.asList("facebook");
 
     /**
      * Connects to default meteor server/port on current machine (not a good idea...use the other method)
@@ -337,6 +355,110 @@ public class DDPStateSingleton extends MeteorAuthCommands
         }
     }
 
+    /**
+     * Logs in using access token -- this breaks the current convention,
+     * but the method call is dependent on some of this class's variables
+     * @param serviceName service name i.e facebook, google
+     * @param accessToken short-lived one-time code received, or long-lived access token for Facebook login
+     * For some logins, such as Facebook, login with OAuth may only work after customizing the accounts-x packages,
+     * until meteor decides to change the packages themselves.
+     * use https://github.com/jasper-lu/accounts-facebook-ddp and
+     *     https://github.com/jasper-lu/facebook-ddp for reference
+     *
+     * If an sdk only allows login returns long-lived token, modify your accounts-x package,
+     * and add the service to the accessTokenServices list
+     */
+
+    public void loginWithOAuth(String serviceName, String accessToken) {
+        sendOAuthHTTPRequest(serviceName, accessToken, randomSecret(), new Response.Listener<String>(){
+            @Override
+            public void onResponse(String response) {
+                //json is stored inside an html object in the response
+                Matcher matcher = Pattern.compile("<div id=\"config\" style=\"display:none;\">(.*?)</div>").matcher(response);
+                matcher.find();
+                try {
+                    JSONObject jsonResponse = new JSONObject(matcher.group(1));
+
+                    Map options = new HashMap<String, Object>();
+                    Map oauth = new HashMap<String, String>();
+                    oauth.put("credentialSecret", jsonResponse.get("credentialSecret"));
+                    oauth.put("credentialToken", jsonResponse.get("credentialToken"));
+                    options.put("oauth", oauth);
+
+                    Object[] methodArgs = new Object[1];
+                    methodArgs[0] = options;
+
+                    getDDP().call("login", methodArgs, new DDPListener() {
+                        @Override
+                        public void onResult(Map<String, Object> jsonFields) {
+                            Log.d(TAG, jsonFields.toString());
+                            handleLoginResult(jsonFields);
+                        }
+                    });
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    /**
+     * Login with OAuth utilities
+     */
+    /*
+     * Login with OAuth requires the priming of "pending credentials" on the server to receive a secret
+     */
+    private void sendOAuthHTTPRequest(String serviceName, String accessToken, String credentialToken, Response.Listener listener) {
+        RequestQueue queue = Volley.newRequestQueue(mContext);
+        String url = "http://" + getServerHostname() + ":" + getServerPort() + "/_oauth/" + serviceName + "/";
+        //as far as I know, Facebook is the only one that only returns a long-lived token on mobile login
+        String params;
+        if (accessTokenServices.contains(serviceName)) {
+            params = "?accessToken=" + accessToken + "&state=" + generateState(credentialToken);
+        } else {
+            params = "?code=" + accessToken + "&state=" + generateState(credentialToken);
+        }
+
+        StringRequest request = new StringRequest(Request.Method.GET, url + params, listener, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                error.printStackTrace();
+                Log.d(TAG, "If you're getting a weird error, " +
+                        "this could be because you haven't configured " +
+                        "your server for ddp loginWithOAuth yet. " +
+                        "For Facebook login, remove accounts-facebook " +
+                        "and add jasperlu:accounts-facebook-ddp instead.");
+            }
+        });
+
+        queue.add(request);
+    }
+
+    /*
+     * client-side generation of credential token
+     */
+    private String randomSecret() {
+        byte[] r = new byte[32];
+        new Random().nextBytes(r);
+        String s = Base64.encodeToString(r, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
+        return s;
+    }
+
+    /*
+     * generates state and converts to base64 for sending to server
+     */
+    private String generateState(String credentialToken) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("credentialToken", credentialToken);
+            json.put("loginStyle", "popup");
+        }catch(Exception e) {
+            Log.d(TAG, e.getMessage());
+        }
+        Log.d(TAG, json.toString());
+        String encoded = Base64.encodeToString(json.toString().getBytes(), Base64.URL_SAFE|Base64.NO_WRAP|Base64.NO_PADDING);
+        return encoded;
+    }
 
     /**
      * Subscribes to specified subscription (note: this can be different from collection)
@@ -566,7 +688,17 @@ public class DDPStateSingleton extends MeteorAuthCommands
             mCollections.put(collName, new ConcurrentHashMap<String, Map<String,Object>>());
         }
         Map<String, Map<String,Object>> collection = mCollections.get(collName);
-        collection.put(docId, (Map<String, Object>) jsonFields.get(DdpMessageField.FIELDS));
+
+        Map<String, Object> fields;
+
+        if(jsonFields.get(DdpMessageField.FIELDS) == null) {
+            fields = new ConcurrentHashMap<>();
+        } else {
+            fields = (Map<String, Object>) jsonFields.get(DdpMessageField.FIELDS);
+        }
+
+        collection.put(docId, fields);
+
         Log.v(TAG, "Added docid " + docId + " to collection " + collName);
     }
 
@@ -594,7 +726,21 @@ public class DDPStateSingleton extends MeteorAuthCommands
         }
         return null;
     }
-    
+
+    /**
+     * Gets current Meteor user info
+     * @return user Info or null if not logged in
+     */
+    public Map<String, Object> getUser() {
+        //Log.v("DDPStateSingleton", "getDocument - " + "collectionName = [" + collectionName + "], docId = [" + docId + "]");
+        Map<String, Object> userFields = DDPStateSingleton.getInstance()
+                .getDocument("users", getUserId());
+        if (userFields != null) {
+            return userFields;
+        }
+        return null;
+    }
+
     /**
      * Gets current Meteor user ID
      * @return user ID or null if not logged in
