@@ -2,7 +2,7 @@ apply plugin: 'signing'
 apply plugin: 'maven'
 
 group = 'com.keysolutions'
-version = '1.0.0.0'
+version = '1.0.1.0'
 
 buildscript {
    repositories {
@@ -57,7 +57,7 @@ dependencies {
     compile "com.android.support:support-v4:[21.0,)"
     compile "com.keysolutions:java-ddp-client:[1.0.0,)"
     //for oauth
-    compile 'com.mcxiaoke.volley:library:1.0.+'
+    compile 'com.mcxiaoke.volley:library:[1.0,)'
 }
 
 /// add tasks for Maven Central

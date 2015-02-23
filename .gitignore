@@ -19,4 +19,5 @@ bin/
 gen/
 libs/
 .gradle
-
+.settings/
+.settings/org.eclipse.jdt.core.prefs
