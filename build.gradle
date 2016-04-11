@@ -2,26 +2,26 @@ apply plugin: 'signing'
 apply plugin: 'maven'
 
 group = 'com.keysolutions'
-version = '1.0.1.0'
+version = '1.0.2.0'
 
 buildscript {
    repositories {
       mavenCentral()
    }
    dependencies {
-      classpath 'com.android.tools.build:gradle:1.0.+'
+      classpath 'com.android.tools.build:gradle:2.0.0'
    }
 }
 
-apply plugin: 'android-library'
+apply plugin: 'com.android.library'
 
 /// this overrides the default src/main gradle layout to match Eclipse's
 android {
-    compileSdkVersion 21
-    buildToolsVersion "21.1.2"
+    compileSdkVersion 23
+    buildToolsVersion "23.0.3"
     
     defaultConfig {
-        targetSdkVersion 21
+        targetSdkVersion 23
         minSdkVersion 10
         versionCode 10
     }
@@ -54,7 +54,7 @@ repositories {
 }
 
 dependencies {
-    compile "com.android.support:support-v4:[21.0,)"
+    compile "com.android.support:support-v4:23.3.0"
     compile "com.keysolutions:java-ddp-client:[1.0.0,)"
     //for oauth
     compile 'com.mcxiaoke.volley:library:[1.0,)'
@@ -158,16 +158,6 @@ task writeNewPom << {
                 }
             }
         }
-        /* converts Gradle dynamic dependency syntax 
-        whenConfigured { generatedPom ->
-          generatedPom.dependencies.each { mavenDep ->
-            if (isDynamic(mavenDep)) {
-              mavenDep.version = '[' + mavenDep.version[0..-2] + ',)'
-            }
-          }
-        }
-        */
-
     }.writeTo("$buildDir/newpom.xml")
 }
 

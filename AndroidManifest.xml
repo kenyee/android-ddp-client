@@ -1,11 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.keysolutions.android.ddpclient"
     android:versionCode="2"
-    android:versionName="1.0.1" >
+    android:versionName="1.0.2"
+    tools:ignore="GradleOverrides">
 
     <uses-sdk
         android:minSdkVersion="8"
-        android:targetSdkVersion="21" />
+        android:targetSdkVersion="23" />
 
     <application >
     </application>

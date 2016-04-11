@@ -1,5 +1,5 @@
 /*
-* (c)Copyright 2013-2014 Ken Yee, KEY Enterprise Solutions 
+* (c)Copyright 2013-2016 Ken Yee, KEY Enterprise Solutions
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ public abstract class MeteorAuthCommands {
     
     abstract DDPClient getDDP();
     abstract void handleLoginResult(Map<String, Object> jsonFields);
+    abstract void handleLogoutResult(Map<String, Object> jsonFields);
 
     /**
      * Logs in using resume token
@@ -38,7 +39,7 @@ public abstract class MeteorAuthCommands {
         TokenAuth tokenAuth = new TokenAuth(token);
         Object[] methodArgs = new Object[1];
         methodArgs[0] = tokenAuth;
-        getDDP().call("login", methodArgs,  new DDPListener() {
+        getDDP().call("login", methodArgs, new DDPListener() {
             @Override
             public void onResult(Map<String, Object> jsonFields) {
                 handleLoginResult(jsonFields);
@@ -82,7 +83,7 @@ public abstract class MeteorAuthCommands {
             return false;
         }
         Object[] methodArgs = new Object[1];
-        Map<String,Object> options = new HashMap<String,Object>();
+        Map<String,Object> options = new HashMap<>();
         methodArgs[0] = options;
         if (username != null) {
             options.put("username", username);
@@ -91,7 +92,7 @@ public abstract class MeteorAuthCommands {
             options.put("email", email);
         }
         options.put("password", password);
-        getDDP().call("createUser", methodArgs,  new DDPListener() {
+        getDDP().call("createUser", methodArgs, new DDPListener() {
             @Override
             public void onResult(Map<String, Object> jsonFields) {
                 handleLoginResult(jsonFields);
@@ -110,13 +111,24 @@ public abstract class MeteorAuthCommands {
             return;
         }
         Object[] methodArgs = new Object[1];
-        Map<String,Object> options = new HashMap<String,Object>();
+        Map<String,Object> options = new HashMap<>();
         methodArgs[0] = options;
         options.put("email", email);
-        getDDP().call("forgotPassword", methodArgs,  new DDPListener() {
+        getDDP().call("forgotPassword", methodArgs, new DDPListener() {
             @Override
             public void onResult(Map<String, Object> jsonFields) {
                 handleLoginResult(jsonFields);
+            }
+        });
+    }
+
+    public void logout()
+    {
+        Object[] methodArgs = new Object[] { };
+        getDDP().call("logout", methodArgs, new DDPListener() {
+            @Override
+            public void onResult(Map<String, Object> jsonFields) {
+                handleLogoutResult(jsonFields);
             }
         });
     }

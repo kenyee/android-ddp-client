@@ -21,3 +21,10 @@ libs/
 .gradle
 .settings/
 .settings/org.eclipse.jdt.core.prefs
+.idea/
+local.properties
+project.properties
+*.iml
+build/outputs/
+build/outputs/aar/*
+

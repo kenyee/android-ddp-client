@@ -1,5 +1,5 @@
 /*
-* (c)Copyright 2013-2014 Ken Yee, KEY Enterprise Solutions 
+* (c)Copyright 2013-2016 Ken Yee, KEY Enterprise Solutions
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -16,26 +16,13 @@
 
 package com.keysolutions.ddpclient.android;
 
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Observable;
-import java.util.Observer;
-import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.support.v4.BuildConfig;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Base64;
-import android.util.Log;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -53,6 +40,21 @@ import com.keysolutions.ddpclient.DDPListener;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Observable;
+import java.util.Observer;
+import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.net.ssl.TrustManager;
+
 /**
  * Base/common handling of DDP state with default handling of collection data as maps
  * Override data update methods to store data into SQLite or other data store
@@ -60,8 +62,8 @@ import org.json.JSONObject;
  */
 public class DDPStateSingleton extends MeteorAuthCommands
         implements Observer, DDPStateBroadcasts, DDPStateStorage {
-    private static final String TAG = "DDPStateSingleton";
-    
+    private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(this.getClass());
+
     // Broadcast Intent info
     public static final String MESSAGE_ERROR                = "ddpclient.ERROR";
     public static final String MESSAGE_CONNECTION           = "ddpclient.CONNECTIONSTATE";
@@ -96,7 +98,9 @@ public class DDPStateSingleton extends MeteorAuthCommands
      */
     protected static Integer sMeteorPort = 80;
     protected Integer mMeteorPort = sMeteorPort;
-    
+    protected boolean mMeteorSsl = false;
+    private TrustManager[] mTrustManagers;
+
     /** reference to lower level DDP websocket client */
     protected DDPClient mDDP;
 
@@ -106,7 +110,7 @@ public class DDPStateSingleton extends MeteorAuthCommands
     /** current DDP state */
     public enum DDPSTATE {
         NotLoggedIn, Connected, LoggedIn, Closed,
-    };
+    }
 
     /** used to track DDP state */
     protected DDPSTATE mDDPState;
@@ -118,7 +122,8 @@ public class DDPStateSingleton extends MeteorAuthCommands
     private String mUserId;
 
     /** stores subscription tracking IDs **/
-    private ConcurrentHashMap<String, Boolean> subscriptionsAreReady = new ConcurrentHashMap<String, Boolean>();
+    private ConcurrentHashMap<String, Boolean> subscriptionsAreReady
+            = new ConcurrentHashMap<>();
     
     /** internal storage for collections */
     // { collectionName,
@@ -128,21 +133,21 @@ public class DDPStateSingleton extends MeteorAuthCommands
     //           }
     //  }
     // }
-    private final Map<String, Map<String, Map<String,Object>>> mCollections = new ConcurrentHashMap<String, Map<String, Map<String,Object>>>();;
+    private final Map<String, Map<String, Map<String,Object>>> mCollections
+            = new ConcurrentHashMap<>();
     
     /** Google GSON object for parsing JSON */
     protected final Gson mGSON = new Gson();
 
     /** Array for mobile login services which sepecifically only return long-lived access tokens **/
-    protected final List<String> accessTokenServices = Arrays.asList("facebook");
+    protected final List<String> accessTokenServices = Collections.singletonList("facebook");
 
     /**
      * Connects to default meteor server/port on current machine (not a good idea...use the other method)
      * @param context Android context
      */
     public static void initInstance(Context context) {
-        // only called by MyApplication
-        initInstance(context, sMeteorServer, sMeteorPort);
+        initInstance(context, sMeteorServer, sMeteorPort, false);
     }
     /**
      * Initializes instance to connect to given Meteor server
@@ -150,13 +155,33 @@ public class DDPStateSingleton extends MeteorAuthCommands
      * @param meteorServerHostname Meteor hostname/IP
      */
     public static void initInstance(Context context, String meteorServerHostname) {
-        // only called by MyApplication
-        initInstance(context, meteorServerHostname, sMeteorPort);
+        initInstance(context, meteorServerHostname, sMeteorPort, false);
     }
-    public static void initInstance(Context context, String meteorServer, Integer meteorPort) {
-        // only called by MyApplication
+    /**
+     * Initializes instance to connect to given Meteor server
+     * @param context Android context
+     * @param meteorServerHostname Meteor hostname/IP
+     * @param useSsl whether to use SSL for connection
+     */
+    public static void initInstance(Context context, String meteorServerHostname, boolean useSsl) {
+        initInstance(context, meteorServerHostname, sMeteorPort, useSsl);
+    }
+    public static void initInstance(Context context, String meteorServerHostname,
+                                    Integer meteorPort, boolean useSsl) {
         if (mInstance == null) {
-            mInstance = new DDPStateSingleton(context, meteorServer, meteorPort);
+            mInstance = new DDPStateSingleton(context, meteorServerHostname, meteorPort, useSsl);
+        }
+    }
+    /**
+     * Initializes instance to connect to given Meteor server
+     * @param context Android context
+     * @param meteorServerHostname Meteor hostname/IP
+     * @param trustManagers trustmanagers to use for SSL
+     */
+    public static void initInstance(Context context, String meteorServerHostname,
+                                    Integer meteorPort, TrustManager[] trustManagers) {
+        if (mInstance == null) {
+            mInstance = new DDPStateSingleton(context, meteorServerHostname, meteorPort, trustManagers);
         }
     }
 
@@ -173,24 +198,44 @@ public class DDPStateSingleton extends MeteorAuthCommands
      * @param context Android application context
      * @param meteorServer String containing the meteor server ie: demoparties.meteor.com
      * @param meteorPort Integer of the meteor server port ie: 80
+     * @param useSsl whether to use SSL to connect to the server
      */
-    public DDPStateSingleton(Context context, String meteorServer, Integer meteorPort) {
+    public DDPStateSingleton(Context context, String meteorServer,
+                             Integer meteorPort, boolean useSsl) {
         this.mContext = context;
         this.mMeteorServerHostname = meteorServer;
         this.mMeteorPort = meteorPort;
+        this.mMeteorSsl = useSsl;
         createDDPClient();
-        // disable IPv6 if we're running on Android emulator because websocket
-        // library doesn't work with it
-        if ("google_sdk".equals(Build.PRODUCT)) {
-            java.lang.System.setProperty("java.net.preferIPv6Addresses",
-                    "false");
-            java.lang.System.setProperty("java.net.preferIPv4Stack", "true");
-        }
+        disableIpV6OnEmulator();
         // kick off a connection before UI starts up
         isConnected();
     }
 
-    
+    public DDPStateSingleton(Context context, String meteorServer,
+                             Integer meteorPort, TrustManager[] trustManagers) {
+        this.mContext = context;
+        this.mMeteorServerHostname = meteorServer;
+        this.mMeteorPort = meteorPort;
+        this.mMeteorSsl = true;
+        this.mTrustManagers = trustManagers;
+        createDDPClient();
+        disableIpV6OnEmulator();
+        // kick off a connection before UI starts up
+        isConnected();
+    }
+
+    private void disableIpV6OnEmulator() {
+        // disable IPv6 if we're running on Android emulator because websocket
+        // library doesn't work with it
+        if ("google_sdk".equals(Build.PRODUCT)) {
+            System.setProperty("java.net.preferIPv6Addresses",
+                    "false");
+            System.setProperty("java.net.preferIPv4Stack", "true");
+        }
+    }
+
+
     /**
      * gets the Meteor Server address
      * 
@@ -239,9 +284,13 @@ public class DDPStateSingleton extends MeteorAuthCommands
      */
     protected void createDDPClient() {
         try {
-            mDDP = new DDPClient(getServerHostname(), getServerPort());
+            if (mTrustManagers != null) {
+                mDDP = new DDPClient(getServerHostname(), getServerPort(), mTrustManagers);
+            } else {
+                mDDP = new DDPClient(getServerHostname(), getServerPort(), mMeteorSsl);
+            }
         } catch (URISyntaxException e) {
-            Log.e(TAG, "Invalid Websocket URL connecting to " + getServerHostname()
+            log.error("Invalid Websocket URL connecting to " + getServerHostname()
                     + ":" + getServerPort());
         }
         getDDP().addObserver(this);
@@ -309,7 +358,6 @@ public class DDPStateSingleton extends MeteorAuthCommands
         saveResumeToken(null);
         mDDPState = DDPSTATE.NotLoggedIn;
         mUserId = null;
-        //REVIEW: do we need to cut websocket connection?
         broadcastConnectionState(mDDPState);
     }
     
@@ -322,7 +370,7 @@ public class DDPStateSingleton extends MeteorAuthCommands
         SharedPreferences.Editor editor = settings.edit();
         //REVIEW: should token be encrypted?
         editor.putString(PREF_RESUMETOKEN, token);
-        editor.commit();
+        editor.apply();
     }
 
     /**
@@ -355,6 +403,18 @@ public class DDPStateSingleton extends MeteorAuthCommands
         }
     }
 
+    public void handleLogoutResult(Map<String, Object> jsonFields) {
+        if (jsonFields.containsKey("error")) {
+            Map<String, Object> error = (Map<String, Object>) jsonFields
+                    .get(DdpMessageField.ERROR);
+            broadcastDDPError((String) error.get("message"));
+        } else {
+            saveResumeToken(null);
+            mDDPState = DDPSTATE.NotLoggedIn;
+            broadcastConnectionState(mDDPState);
+        }
+    }
+
     /**
      * Logs in using access token -- this breaks the current convention,
      * but the method call is dependent on some of this class's variables
@@ -375,14 +435,13 @@ public class DDPStateSingleton extends MeteorAuthCommands
             public void onResponse(String response) {
                 //json is stored inside an html object in the response
                 Matcher matcher = Pattern.compile("<div id=\"config\" style=\"display:none;\">(.*?)</div>").matcher(response);
-                matcher.find();
                 try {
                     JSONObject jsonResponse = new JSONObject(matcher.group(1));
 
-                    Map options = new HashMap<String, Object>();
-                    Map oauth = new HashMap<String, String>();
-                    oauth.put("credentialSecret", jsonResponse.get("credentialSecret"));
-                    oauth.put("credentialToken", jsonResponse.get("credentialToken"));
+                    Map<String, Object> options = new HashMap<>();
+                    Map<String, String> oauth = new HashMap<>();
+                    oauth.put("credentialSecret", (String) jsonResponse.get("credentialSecret"));
+                    oauth.put("credentialToken", (String) jsonResponse.get("credentialToken"));
                     options.put("oauth", oauth);
 
                     Object[] methodArgs = new Object[1];
@@ -391,7 +450,9 @@ public class DDPStateSingleton extends MeteorAuthCommands
                     getDDP().call("login", methodArgs, new DDPListener() {
                         @Override
                         public void onResult(Map<String, Object> jsonFields) {
-                            Log.d(TAG, jsonFields.toString());
+                            if (BuildConfig.DEBUG) {
+                                log.debug(jsonFields.toString());
+                            }
                             handleLoginResult(jsonFields);
                         }
                     });
@@ -419,15 +480,18 @@ public class DDPStateSingleton extends MeteorAuthCommands
             params = "?code=" + accessToken + "&state=" + generateState(credentialToken);
         }
 
-        StringRequest request = new StringRequest(Request.Method.GET, url + params, listener, new Response.ErrorListener() {
+        StringRequest request = new StringRequest(Request.Method.GET, url + params,
+                listener, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
                 error.printStackTrace();
-                Log.d(TAG, "If you're getting a weird error, " +
-                        "this could be because you haven't configured " +
-                        "your server for ddp loginWithOAuth yet. " +
-                        "For Facebook login, remove accounts-facebook " +
-                        "and add jasperlu:accounts-facebook-ddp instead.");
+                if (BuildConfig.DEBUG) {
+                    log.debug("If you're getting a weird error, " +
+                            "this could be because you haven't configured " +
+                            "your server for ddp loginWithOAuth yet. " +
+                            "For Facebook login, remove accounts-facebook " +
+                            "and add jasperlu:accounts-facebook-ddp instead.");
+                }
             }
         });
 
@@ -440,8 +504,7 @@ public class DDPStateSingleton extends MeteorAuthCommands
     private String randomSecret() {
         byte[] r = new byte[32];
         new Random().nextBytes(r);
-        String s = Base64.encodeToString(r, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
-        return s;
+        return Base64.encodeToString(r, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
     }
 
     /*
@@ -452,26 +515,28 @@ public class DDPStateSingleton extends MeteorAuthCommands
         try {
             json.put("credentialToken", credentialToken);
             json.put("loginStyle", "popup");
-        }catch(Exception e) {
-            Log.d(TAG, e.getMessage());
+        } catch(Exception e) {
+            log.warn(e.getMessage());
         }
-        Log.d(TAG, json.toString());
-        String encoded = Base64.encodeToString(json.toString().getBytes(), Base64.URL_SAFE|Base64.NO_WRAP|Base64.NO_PADDING);
-        return encoded;
+        if (BuildConfig.DEBUG) {
+            log.debug(json.toString());
+        }
+        return Base64.encodeToString(json.toString().getBytes(), Base64.URL_SAFE|Base64.NO_WRAP|Base64.NO_PADDING);
     }
 
     /**
      * Subscribes to specified subscription (note: this can be different from collection)
      * @param subscriptionName name of subscription
      * @param params parameters for subscription function (e.g., doc ID, etc.)
+     * @return subscription ID
      */
-    public void subscribe(final String subscriptionName, Object[] params) {
+    public int subscribe(final String subscriptionName, Object[] params) {
         // add the subscription to the HashMap with its initial value "false" which says that it is not ready
         subscriptionsAreReady.put(subscriptionName, false);
         
         // subscribe to a Meteor collection with given params
         // test error handling for invalid subscription
-        getDDP().subscribe(subscriptionName, params, new DDPListener() {
+        return getDDP().subscribe(subscriptionName, params, new DDPListener() {
             @Override
             public void onReady(String id) {
                 // mark subscription ready
@@ -485,11 +550,9 @@ public class DDPStateSingleton extends MeteorAuthCommands
             @Override
             public void onResult(Map<String, Object> jsonFields) {
                 String msgtype = (String) jsonFields
-                        .get(DDPClient.DdpMessageField.MSG);
-                if (msgtype == null) {
-                    // ignore {"server_id":"GqrKrbcSeDfTYDkzQ"} web socket msgs
-                    return;
-                } else if (msgtype.equals(DdpMessageType.ERROR)) {
+                        .get(DdpMessageField.MSG);
+                // ignore {"server_id":"GqrKrbcSeDfTYDkzQ"} web socket msgs
+                if ((msgtype != null) && (msgtype.equals(DdpMessageType.ERROR))) {
                     broadcastDDPError((String) jsonFields
                             .get(DdpMessageField.ERRORMSG));
                 }
@@ -506,8 +569,7 @@ public class DDPStateSingleton extends MeteorAuthCommands
      *         subscriptions aren't ready
      */
     public boolean areAllSubscriptionsReady() {
-        boolean allReady = !(subscriptionsAreReady.containsValue(false));
-        return allReady;
+        return !(subscriptionsAreReady.containsValue(false));
     }
 
     /**
@@ -577,31 +639,40 @@ public class DDPStateSingleton extends MeteorAuthCommands
             String collName = (String) jsonFields.get(DdpMessageField.COLLECTION);
             String docId = (String) jsonFields.get(DdpMessageField.ID);
 
-            if (msgtype == null) {
-                // ignore {"server_id":"GqrKrbcSeDfTYDkzQ"} web socket msgs
-                return;
-            } else if (msgtype.equals(DdpMessageType.ERROR)) {
-                broadcastDDPError((String) jsonFields
-                        .get(DdpMessageField.ERRORMSG));
-            } else if (msgtype.equals(DdpMessageType.CONNECTED)) {
-                mDDPState = DDPSTATE.Connected;
-                broadcastConnectionState(mDDPState);
-            } else if (msgtype.equals(DdpMessageType.ADDED)) {
-                addDoc(jsonFields, collName, docId);
-                // broadcast that subscription has been updated
-                broadcastSubscriptionChanged(collName, DdpMessageType.ADDED, docId);
-            } else if (msgtype.equals(DdpMessageType.REMOVED)) {
-                if (removeDoc(collName, docId)) {
-                    // broadcast that subscription has been updated
-                    broadcastSubscriptionChanged(collName,
-                            DdpMessageType.REMOVED, docId);
-                }
-            } else if (msgtype.equals(DdpMessageType.CHANGED)) {
-                // handle document updates
-                if (updateDoc(jsonFields, collName, docId)) {
-                    // broadcast that subscription has been updated
-                    broadcastSubscriptionChanged(collName,
-                            DdpMessageType.CHANGED, docId);
+            // ignore {"server_id":"GqrKrbcSeDfTYDkzQ"} web socket msgs
+            if (msgtype != null) {
+                switch (msgtype) {
+                    case DdpMessageType.ERROR:
+                        broadcastDDPError((String) jsonFields.get(DdpMessageField.ERRORMSG));
+                        break;
+                    case DdpMessageType.CONNECTED:
+                        mDDPState = DDPSTATE.Connected;
+                        broadcastConnectionState(mDDPState);
+                        break;
+                    case DdpMessageType.ADDED:
+                        addDoc(jsonFields, collName, docId);
+                        // broadcast that subscription has been updated
+                        broadcastSubscriptionChanged(collName, DdpMessageType.ADDED, docId);
+                        break;
+                    case DdpMessageType.REMOVED:
+                        if (removeDoc(collName, docId)) {
+                            // broadcast that subscription has been updated
+                            broadcastSubscriptionChanged(collName,
+                                    DdpMessageType.REMOVED, docId);
+                        }
+                        break;
+                    case DdpMessageType.CHANGED:
+                        // handle document updates
+                        if (updateDoc(jsonFields, collName, docId)) {
+                            // broadcast that subscription has been updated
+                            broadcastSubscriptionChanged(collName,
+                                    DdpMessageType.CHANGED, docId);
+                        }
+                        break;
+                    case DdpMessageType.CLOSED:
+                        mDDPState = DDPSTATE.Closed;
+                        broadcastConnectionState(DDPSTATE.Closed);
+                        break;
                 }
             }
         }
@@ -620,8 +691,7 @@ public class DDPStateSingleton extends MeteorAuthCommands
             String docId) {
         if (mCollections.containsKey(collName)) {
             Map<String, Map<String,Object>> collection = mCollections.get(collName);
-            Map<String, Object> doc = (Map<String, Object>) collection
-                    .get(docId);
+            Map<String, Object> doc = collection.get(docId);
             if (doc != null) {
                 // take care of field updates
                 Map<String, Object> fields = (Map<String, Object>) jsonFields
@@ -645,7 +715,7 @@ public class DDPStateSingleton extends MeteorAuthCommands
                 return true;
             }
         } else {
-            Log.w(TAG, "Received invalid changed msg for collection "
+            log.warn("Received invalid changed msg for collection "
                     + collName);
         }
         return false;
@@ -662,11 +732,13 @@ public class DDPStateSingleton extends MeteorAuthCommands
         if (mCollections.containsKey(collName)) {
             // remove IDs from collection
             Map<String, Map<String,Object>> collection = mCollections.get(collName);
-            Log.v(TAG, "Removed doc: " + docId);
+            if (BuildConfig.DEBUG) {
+                log.debug("Removed doc: " + docId);
+            }
             collection.remove(docId);
             return true;
         } else {
-            Log.w(TAG, "Received invalid removed msg for collection "
+            log.warn("Received invalid removed msg for collection "
                     + collName);
             return false;
         }
@@ -684,7 +756,7 @@ public class DDPStateSingleton extends MeteorAuthCommands
             String docId) {
         if (!mCollections.containsKey(collName)) {
             // add new collection
-            Log.v(TAG, "Added collection " + collName);
+            log.debug("Added collection " + collName);
             mCollections.put(collName, new ConcurrentHashMap<String, Map<String,Object>>());
         }
         Map<String, Map<String,Object>> collection = mCollections.get(collName);
@@ -699,7 +771,9 @@ public class DDPStateSingleton extends MeteorAuthCommands
 
         collection.put(docId, fields);
 
-        Log.v(TAG, "Added docid " + docId + " to collection " + collName);
+        if (BuildConfig.DEBUG) {
+            log.debug("Added docid " + docId + " to collection " + collName);
+        }
     }
 
     /**
@@ -732,7 +806,6 @@ public class DDPStateSingleton extends MeteorAuthCommands
      * @return user Info or null if not logged in
      */
     public Map<String, Object> getUser() {
-        //Log.v("DDPStateSingleton", "getDocument - " + "collectionName = [" + collectionName + "], docId = [" + docId + "]");
         Map<String, Object> userFields = DDPStateSingleton.getInstance()
                 .getDocument("users", getUserId());
         if (userFields != null) {

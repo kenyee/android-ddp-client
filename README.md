@@ -119,20 +119,19 @@ Maven Artifact
 This library is in the Maven Central Library hosted by Sonatype.
 In Gradle, you can reference it with this in your dependencies:
 
-    compile group: 'com.keysolutions', name: 'android-ddp-client', version: '0.5.7.+'
+    compile group: 'com.keysolutions', name: 'android-ddp-client', version: '1.0.2.+'
 
 And in Maven, you can reference it with this:
 
     <dependency>
       <groupId>com.keysolutions</groupId>
       <artifactId>android-ddp-client</artifactId>
-      <version>1.0.0.0</version>
+      <version>1.0.2.0</version>
       <type>pom</type>
     </dependency>
 
-The version of the library will match the Meteor.js DDP protocol version with the 
-library revision in the last digit (0.5.7.1, 0.5.7.2, etc.).  This version supports
-DDP protocol version 0.5.7 (handled by java-ddp-client library).
+The version of the library supports DDP protocol 
+version 1.0 (handled by java-ddp-client library).
 
 * 0.5.7.1 uses com.google.android:support-v4:r7
 * 0.5.7.2 uses com.android.support:support-v4:13.0.+ and adds getDocument() method
@@ -141,6 +140,7 @@ DDP protocol version 0.5.7 (handled by java-ddp-client library).
 * 0.5.7.6 fix handling of add/delete field (skipped version 0.5.7.6 to match java-ddp-client update)
 * 1.0.0.0 update to latest libraries and match java-ddp-client version w/ ping/pong support; merge pull requests
 * 1.0.1.0 merge in Jasper's Facebook login support
+* 1.0.2.0 add missing Closed broadcast notification; add SSL support; add logout; update to Android Studio
   
 To-Do
 -----
