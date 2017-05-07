@@ -6,10 +6,11 @@ version = '1.0.2.0'
 
 buildscript {
    repositories {
+      jcenter()
       mavenCentral()
    }
    dependencies {
-      classpath 'com.android.tools.build:gradle:2.0.0'
+      classpath 'com.android.tools.build:gradle:2.3.1'
    }
 }
 
@@ -17,11 +18,11 @@ apply plugin: 'com.android.library'
 
 /// this overrides the default src/main gradle layout to match Eclipse's
 android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.3"
+    compileSdkVersion 25
+    buildToolsVersion "25.0.2"
     
     defaultConfig {
-        targetSdkVersion 23
+        targetSdkVersion 25
         minSdkVersion 10
         versionCode 10
     }
@@ -51,10 +52,12 @@ android {
 /// add dependencies
 repositories {
     mavenCentral()
+    jcenter()
+    maven { url "http://clojars.org/repo" }
 }
 
 dependencies {
-    compile "com.android.support:support-v4:23.3.0"
+    compile "com.android.support:support-v4:25.3.1"
     compile "com.keysolutions:java-ddp-client:[1.0.0,)"
     //for oauth
     compile 'com.mcxiaoke.volley:library:[1.0,)'
